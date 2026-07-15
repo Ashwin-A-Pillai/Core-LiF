@@ -1,0 +1,49 @@
+&control
+    calculation = 'scf'
+    prefix = 'LiF'
+    pseudo_dir = '/home/pillai/my_codes/yambo/LiF/PS'
+    outdir = './outs'
+    verbosity = 'high'
+    wf_collect = .true.
+    tprnfor = .true.
+    tstress = .true.
+/
+
+&system
+    ibrav = 0
+    nat = 2
+    ntyp = 2
+
+    ecutwfc = 70,
+    nbnd = 40,
+    
+    input_dft = 'PBE'
+
+    occupations = 'fixed'
+
+    force_symmorphic = .true.
+/
+
+&electrons
+    conv_thr = 1.0d-12
+    electron_maxstep = 300
+    diagonalization = 'david'
+    diago_david_ndim = 4
+    mixing_beta = 0.3
+/
+
+ATOMIC_SPECIES
+    Li  6.94100   Li_ONCV_PBE-1.2.upf
+    F   18.99840  F_ONCV_PBE-1.2.upf
+
+CELL_PARAMETERS angstrom
+    0.0000000000   2.0417140000   2.0417140000
+    2.0417140000   0.0000000000   2.0417140000
+    2.0417140000   2.0417140000   0.0000000000
+
+ATOMIC_POSITIONS crystal
+    Li  0.0000000000  0.0000000000  0.0000000000
+    F   0.5000000000  0.5000000000  0.5000000000
+
+K_POINTS automatic
+ 16 16 16 0 0 0
