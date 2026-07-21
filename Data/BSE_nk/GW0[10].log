@@ -1,0 +1,2 @@
+[prun] Resource manager = slurm
+[prun] Launch cmd = srun --mpi=pmix /home/attaccalite/SOFTWARE/lumen/bin/yambo -F GW0.in -J GW0 (family=openmpi4)

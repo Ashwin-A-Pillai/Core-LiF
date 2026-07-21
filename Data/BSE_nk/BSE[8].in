@@ -1,0 +1,101 @@
+#                                                                     
+# $$\                                                                 
+# $$ |                                                                
+# $$ |     $$\   $$\ $$$$$$\$$$$\   $$$$$$\  $$$$$$$\                 
+# $$ |     $$ |  $$ |$$  _$$  _$$\ $$  __$$\ $$  __$$\                
+# $$ |     $$ |  $$ |$$ / $$ / $$ |$$$$$$$$ |$$ |  $$ |               
+# $$ |     $$ |  $$ |$$ | $$ | $$ |$$   ____|$$ |  $$ |               
+# $$$$$$$$\\$$$$$$  |$$ | $$ | $$ |\$$$$$$$\ $$ |  $$ |               
+# \________|\______/ \__| \__| \__| \_______|\__|  \__|               
+#                                                                     
+#                   Fork Lumen 2.1.0                                  
+#                   Branch is nlresp                                  
+#        MPI+OpenMP+SLK+SLEPC+HDF5_MPI_IO Build                       
+#               http://www.lumen-code.org                             
+#
+optics                           # [R] Linear Response optical properties
+bss                              # [R] BSE solver
+bse                              # [R][BSE] Bethe Salpeter Equation.
+dipoles                          # [R] Oscillator strenghts (or dipoles)
+em1d                             # [R][X] Dynamically Screened Interaction
+ppa                              # [R][Xp] Plasmon Pole Approximation for the Screened Interaction
+Chimod= "HARTREE"                # [X] IP/Hartree/ALDA/LRC/PF/BSfxc
+BSKmod= "SEX"                    # [BSE] IP/Hartree/HF/ALDA/SEX/BSfxc
+BSEmod= "resonant"               # [BSE] resonant/retarded/coupling
+BSEdiskIO= "medium"              # [BSE] high(restart always) |medium(restart only corr.) |low(writes at the end)|none
+BSSmod= "d"                      # [BSS] (h)aydock/(d)iago/(o)ld-diago/(s)lepc/(i)nversion/(c)hase
+BSENGexx=  8000            mHa    # [BSK] Exchange components
+BSENGBlk=  6000        mHa    # [BSK] Screened interaction block size [if -1 uses all the G-vectors of W(q,G,Gp)]
+#WehCpl                        # [BSK] eh interaction included also in coupling
+KfnQPdb= "E < GW0/ndb.QP"                  # [EXTQP BSK BSS] Database action
+KfnQP_INTERP_NN= 1               # [EXTQP BSK BSS] Interpolation neighbours (NN mode)
+KfnQP_INTERP_shells= 20.00000    # [EXTQP BSK BSS] Interpolation shells (BOLTZ mode)
+KfnQP_DbGd_INTERP_mode= "NN"     # [EXTQP BSK BSS] Interpolation DbGd mode
+% KfnQP_E
+ 0.000000 | 1.000000 | 1.000000 |        # [EXTQP BSK BSS] E parameters  (c/v) eV|adim|adim
+%
+KfnQP_Z= ( 1.000000 , 0.000000 )         # [EXTQP BSK BSS] Z factor  (c/v)
+KfnQP_Wv_E= 0.000000       eV    # [EXTQP BSK BSS] W Energy reference  (valence)
+% KfnQP_Wv
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP BSK BSS] W parameters  (valence) eV| 1|eV^-1
+%
+KfnQP_Wv_dos= 0.000000     eV    # [EXTQP BSK BSS] W dos pre-factor  (valence)
+KfnQP_Wc_E= 0.000000       eV    # [EXTQP BSK BSS] W Energy reference  (conduction)
+% KfnQP_Wc
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP BSK BSS] W parameters  (conduction) eV| 1 |eV^-1
+%
+KfnQP_Wc_dos= 0.000000     eV    # [EXTQP BSK BSS] W dos pre-factor  (conduction)
+% BSEQptR
+ 1 | 1 |                             # [BSK] Transferred momenta range
+%
+% BSEBands
+   3 |  8 |                         # [BSK] Bands range
+%
+#NoDiagSC                      # New setup for non-diagonal supercells
+% BEnRange
+  5.0 | 20.0 |   eV    # [BSS] Energy range
+%
+BDmType= "Lorentzian"            # [BSS] Damping type (Lorentzian | Gaussian)
+% BDmRange
+ 0.100000 | 0.100000 |         eV    # [BSS] Damping range
+%
+BEnSteps= 400                    # [BSS] Energy steps
+% BLongDir
+ 1.000000 | 1.000000 | 1.000000 |        # [BSS] [cc] Electric Field versor
+%
+BSEprop= "abs"                   # [BSS] Can be any among abs/jdos/kerr/asymm/anHAll/magn/dich/photolum/esrt/MEspin/MEorb
+BSEdips= "none"                  # [BSS] Can be "trace/none" or "xy/xz/yz" to define off-diagonal rotation plane
+#WRbsWF                        # [BSS] Write to disk excitonic the WFs
+BSSldiaLib= "s"                  # [BSS] Library used with ldiago solver `(s)scalapack/(e1)elpa1/(e2)elpa2`
+BSSNEig=0                        # [SLEPC/DIAGO] Number of eigenvalues to compute
+Lkind="bar"                  #[BSE,X] bar(default)/full/tilde
+XfnQPdb= "none"                  # [EXTQP Xd] Database action
+XfnQP_INTERP_NN= 1               # [EXTQP Xd] Interpolation neighbours (NN mode)
+XfnQP_INTERP_shells= 20.00000    # [EXTQP Xd] Interpolation shells (BOLTZ mode)
+XfnQP_DbGd_INTERP_mode= "NN"     # [EXTQP Xd] Interpolation DbGd mode
+% XfnQP_E
+ 0.000000 | 1.000000 | 1.000000 |        # [EXTQP Xd] E parameters  (c/v) eV|adim|adim
+%
+XfnQP_Z= ( 1.000000 , 0.000000 )         # [EXTQP Xd] Z factor  (c/v)
+XfnQP_Wv_E= 0.000000       eV    # [EXTQP Xd] W Energy reference  (valence)
+% XfnQP_Wv
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP Xd] W parameters  (valence) eV| 1|eV^-1
+%
+XfnQP_Wv_dos= 0.000000     eV    # [EXTQP Xd] W dos pre-factor  (valence)
+XfnQP_Wc_E= 0.000000       eV    # [EXTQP Xd] W Energy reference  (conduction)
+% XfnQP_Wc
+ 0.000000 | 0.000000 | 0.000000 |        # [EXTQP Xd] W parameters  (conduction) eV| 1 |eV^-1
+%
+XfnQP_Wc_dos= 0.000000     eV    # [EXTQP Xd] W dos pre-factor  (conduction)
+% BndsRnXp
+   1 |  40 |                         # [Xp] Polarization function bands
+%
+NGsBlkXp=  6000 mHa                 # [Xp] Response block size
+% LongDrXp
+ 0.100000E-4 |  0.00000    |  0.00000    # [Xp] [cc] Electric Field
+%
+PPAPntXp= 27.21138         eV    # [Xp] PPA imaginary energy
+BS_ROLEs = "eh.k"            # [PARALLEL] MPI roles for the BSE kernel
+BS_CPU   = "4.6"             # [PARALLEL] 4 over e-h, 6 over k = 24 MPI ranks
+BS_nCPU_invert = 4            # [PARALLEL] CPUs for matrix inversion
+BS_nCPU_diago  = 4            # [PARALLEL] CPUs for matrix diagonalization

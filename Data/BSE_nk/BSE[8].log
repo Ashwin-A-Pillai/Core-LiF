@@ -1,0 +1,2 @@
+[prun] Resource manager = slurm
+[prun] Launch cmd = srun --mpi=pmix /home/attaccalite/SOFTWARE/lumen/bin/yambo -F BSE.in -J BSE (family=openmpi4)
