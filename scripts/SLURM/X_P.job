@@ -1,1 +1,228 @@
+#!/bin/bash -l
+###############################################################################
+# SLURM: QE (pw.x) + Yambo
+###############################################################################
+#SBATCH --job-name=XP
+#SBATCH --output=outs/%x.%j.out
+#SBATCH --error=outs/%x.%j.err
+#SBATCH --partition=c9
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --cpus-per-task=2
 
+set -euo pipefail
+ulimit -l unlimited
+
+###############################################################################
+# Modules / environment
+###############################################################################
+export OMPI_MCA_pml="ucx"
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+export OMP_PLACES=cores
+export OMP_PROC_BIND=close
+
+# Maximum number of bands available to Yambo
+QE_NBND=10
+
+# BSE transition space
+BSE_NBND=10
+
+DEFAULT_K_FINAL=29
+
+YAMBO="/home/attaccalite/SOFTWARE/lumen/bin/yambo"
+P2Y="/home/attaccalite/SOFTWARE/lumen/bin/p2y"
+YNL="/home/attaccalite/SOFTWARE/lumen/bin/yambo_nl"
+YRT="/home/attaccalite/SOFTWARE/lumen/bin/yambo_rt"
+YPP="/home/attaccalite/SOFTWARE/lumen/bin/ypp"
+P2Y="/home/attaccalite/SOFTWARE/lumen/bin/p2y"
+scripts="/home/pillai/my_codes/yambo/LiF/scripts/"
+
+
+# Fixed Yambo band cutoff for nk convergence
+
+
+###############################################################################
+# Directories
+###############################################################################
+WORKDIR="${PWD}" 
+
+mkdir -p outs
+
+echo
+echo "Starting at        : $(date)"
+echo " Job name          : ${SLURM_JOB_NAME}" 
+echo " Job ID            : ${SLURM_JOB_ID}" 
+echo " Node list         : ${SLURM_NODELIST}" 
+echo " MPI ranks         : ${SLURM_NTASKS}" 
+echo " OMP threads/rank  : ${OMP_NUM_THREADS}" 
+echo
+
+###############################################################################
+# Clean stale artifacts
+###############################################################################
+echo "[$(date)] Cleaning old artifacts..."
+
+  # ---------- GW0 ----------
+  GWtag="GW0"
+  GWin="${GWtag}.in"
+  GWout="${GWtag}.out"
+  GWjob="${GWtag}" 
+  GWlog="LOG_${GWtag}" 
+  
+  BSEtag="Bfull"
+  BSEin="${BSEtag}.in"
+  BSEout="${BSEtag}.out"
+  BSEjob="${BSEtag}" 
+  BSElog="LOG_${BSEtag}"
+
+  #############################################################################
+  # Switch to Yambo/Lumen environment
+  #############################################################################
+  module purge
+  module load gnu12/12.2.0
+  module load openmpi4/4.1.5
+  module load phdf5/1.14.0
+  module load netcdf/4.9.0
+  module load netcdf-fortran/4.6.0
+  module load scalapack/2.2.2
+  module load fftw/3.3.10
+  module load openblas/0.3.21
+  module load petsc/3.22.0_s
+  module load slepc/3.22.0_s
+  module load libxc/5.2.3
+  module load pmix/4.2.9
+  module load prun/2.2
+  module list
+  
+  export F_CORBAND=10
+  
+  export Polar_band=${F_CORBAND}
+  export k_final=${DEFAULT_K_FINAL}
+  export i_corband=1
+  export f_corband=10
+
+  echo "[$(date)] Running p2y and Yambo initialization ..."
+
+  rm -rf SAVE || true
+
+  "${P2Y}" 
+  "${YAMBO}" 
+  
+###############################################################################
+# Common direction
+###############################################################################
+export efield1_x=1.000000
+export efield1_y=0.000000
+export efield1_z=0.000000
+
+###############################################################################
+# Yambo GW0: run once
+###############################################################################
+echo "[$(date)] Running GW0..."
+
+rm -rf "${GWtag}" "${GWtag}_files" screening SEX "${BSEjob}" "${BSEtag}_files" "Bbar" "Bbar_files"
+
+export Polar_band="${QE_NBND}"
+export k_final="${DEFAULT_K_FINAL}"
+export i_corband=1
+export f_corband="${BSE_NBND}"
+
+"${YAMBO}" -hf -gw0 p -dyson n -Input GW_temp.in
+bash "${scripts}/patch_GW.sh" GW_temp.in "${GWin}"
+
+prun "${YAMBO}" -F "${GWin}" -J "${GWjob}" -C "${GWtag}_files" > "${GWout}"
+
+[[ -e LOG ]] && mv -f LOG "${GWlog}"
+
+export QPdir="E < ${GWjob}/ndb.QP"
+
+###############################################################################
+# Static SEX screening: run once
+###############################################################################
+echo "[$(date)] Running static screening..."
+
+# Screening uses the full available polarization-band range
+export i_corband=1
+export f_corband="${QE_NBND}"
+export NGBlk=6000
+
+"${YAMBO}" -X s -F sex.in -Q
+bash "${scripts}/patch_SEX.sh" sex.in screening.in
+
+prun "${YAMBO}" -F screening.in -J screening -C SEX
+
+  rm -rf "${BSEjob}" "${BSEtag}_files"
+
+  export DB_off=BS
+
+  # Dipoles / BSE transition space
+  export i_db=1
+  export f_db="${BSE_NBND}"
+  export i_corband=1
+  export f_corband="${BSE_NBND}"
+
+  # BSE kernel
+  export BSE_EX=20000
+
+  # QP correction
+  export KE_V=6.00000
+  export KE_v=1.050000
+  export KE_c=1.050000
+
+  # q range
+  export iq=1
+  export fq="${DEFAULT_K_FINAL}"
+
+  # Frozen bands
+  export i_FzB=2
+  export f_FzB=5
+
+  # Spectrum
+  export iE=0.00000
+  export fE=10.00000
+  export BS_Esteps=5001
+
+  # BSE properties
+  export B_prp="abs esrt"
+  export BdL="e2"
+
+  # Parallelization: 4 x 6 = 24 MPI ranks
+  export BS_CPU_LAYOUT="4.6"
+  export BS_ROLES="eh.k"
+  export BS_INV_CPUS=4
+  export BS_DIAGO_CPUS=4
+  
+  
+  # ---------- BSE-Full --------- 
+  
+  export LKind="full"
+
+  "${YAMBO}" -o b -k sex -y d -V all -F bse_s.in -Q
+  bash "${scripts}/patch_BSE_S.sh" bse_s.in "${BSEin}"
+
+  prun "${YAMBO}" -F "${BSEin}" -J "${BSEjob},screening" -C "${BSEtag}_files" > "${BSEout}"
+    
+ # ---------- BSE-bat ----------
+  BSEtag="Bbar"
+  BSEin="${BSEtag}.in"
+  BSEout="${BSEtag}.out"
+  BSEjob="${BSEtag}" 
+  BSElog="LOG_${BSEtag}" 
+  
+  export LKind="BAR"
+  export fq=1
+
+  "${YAMBO}" -o b -k sex -y d -V all -F bse_s.in -Q
+  bash "${scripts}/patch_BSE_S.sh" bse_s.in "${BSEin}"
+
+  prun "${YAMBO}" -F "${BSEin}" -J "${BSEjob},screening" -C "${BSEtag}_files" > "${BSEout}"
+  
+  rm -f "Dmats.npy" "Ex-ph.npy" "exc_dipoles.npy"
+    
+  conda activate yambo-lelphc
+  yambopy l2y -ph "../../LiF.pho.in" -b 1 10 -par 4 2 -lelphc "/home/pillai/my_codes/LetzElPhC/src/lelphc"
+  
+  python3 luminesence.py
+  
+echo
+echo "Finished at: $(date)"
