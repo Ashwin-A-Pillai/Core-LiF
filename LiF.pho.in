@@ -1,0 +1,16 @@
+LiF_dvscf
+&inputph
+  tr2_ph          = 1.0d-14,
+  verbosity       = 'high',
+  prefix          = 'LiF_sr',
+  outdir          = './pbe_sr/',
+  fildvscf = 'LiF-dvscf',
+  electron_phonon = 'dvscf',
+  fildyn='LiF.dyn',
+  epsil=.false.,
+  ldisp=.true.,
+  recover=.true.,
+  nq1=8,
+  nq2=8,
+  nq3=8
+/

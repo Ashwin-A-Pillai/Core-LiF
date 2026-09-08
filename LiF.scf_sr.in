@@ -1,0 +1,31 @@
+  &control
+    calculation  = 'scf',
+    verbosity    = 'high'
+    pseudo_dir   = "/home/pillai/my_codes/yambo/LiF/psps/pwscf/pseudo_dojo/pbe/sr"
+    outdir       = "./pbe_sr/"
+    wf_collect   = .true., 
+    tprnfor      = .true.,
+    tstress      = .true.,
+    prefix       = "LiF_sr",
+ /
+ &system
+    ibrav = 2, 
+    nat = 2, 
+    ntyp = 2, 
+    force_symmorphic=.true. , 
+    ecutwfc = 80.0,
+    nbnd = 10 ,    
+    celldm(1)=7.608,
+ /
+ &electrons
+    diago_full_acc = .TRUE.,
+    conv_thr =  1.0d-10
+ /
+ ATOMIC_SPECIES
+    Li    6.941       Li.upf
+     F    18.998403   F.upf
+ ATOMIC_POSITIONS crystal
+Li  0. 0. 0.
+ F  0.5 -0.5 0.5
+K_POINTS automatic
+ 6 6 6  0  0  0
