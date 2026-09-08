@@ -1,0 +1,376 @@
+#!/usr/bin/env bash
+###############################################################################
+# SLURM: Quantum ESPRESSO SCF + NSCF for monolayer hBN
+#
+# Resources:
+#   1 node
+#   24 MPI ranks
+#   2 OpenMP threads per MPI rank
+#   48 CPU cores total
+###############################################################################
+
+#SBATCH --job-name=r_LiF
+#SBATCH --output=outs/%x.%j.out
+#SBATCH --error=outs/%x.%j.err
+#SBATCH --partition=c9
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --ntasks-per-node=24
+#SBATCH --cpus-per-task=2
+
+
+set -euo pipefail
+ulimit -l unlimited
+
+###############################################################################
+# Environment
+###############################################################################
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+
+mkdir -p outs
+export SCF_NK=8
+export NSCF_NK=8
+
+export ECUTWFC=80
+export NBND=10
+
+# 24 MPI ranks / 4 pools = 6 MPI ranks per pool
+export NPOOL=4
+
+# K-point shifts
+#
+# SCF:
+#   32 32 1 0 1 1
+#
+# NSCF:
+#   32 32 1 0 0 0
+#
+export SCF_SHIFT_X=1
+export SCF_SHIFT_Y=1
+export SCF_SHIFT_Z=1
+
+export NSCF_SHIFT_X=0
+export NSCF_SHIFT_Y=0
+export NSCF_SHIFT_Z=0
+
+
+###############################################################################
+# Input/output files
+###############################################################################
+
+export SCF_TEMPLATE="LiF.scf_sr.in"
+export NSCF_TEMPLATE="LiF.nscf_sr.in"
+
+export SCF_INPUT="LiF.scf.K${SCF_NK}.E${ECUTWFC}.B${NBND}.in"
+export NSCF_INPUT="LiF.nscf.K${NSCF_NK}.E${ECUTWFC}.B${NBND}.in"
+
+export SCF_OUTPUT="LiF.scf.K${SCF_NK}.E${ECUTWFC}.B${NBND}.out"
+export NSCF_OUTPUT="LiF.nscf.K${NSCF_NK}.E${ECUTWFC}.B${NBND}.out"
+
+export PH_INPUT="LiF.pho.in"
+export PH_OUTPUT="phx.out"
+
+
+###############################################################################
+# Runtime environment
+###############################################################################
+
+cd "${SLURM_SUBMIT_DIR:?SLURM_SUBMIT_DIR is not set}"
+
+###############################################################################
+# Load QE environment
+###############################################################################
+module purge
+module load gnu12/12.2.0
+module load openmpi4/4.1.5
+module load ucx/1.17.0
+module load pmix/4.2.9
+module load openblas/0.3.21
+module load fftw/3.3.10
+module load scalapack/2.2.0
+module load phdf5/1.14.0
+module load netcdf/4.9.0
+module load netcdf-fortran/4.6.0
+module load petsc/3.22.0_s
+module load slepc/3.22.0_s
+module load qe/7.3.1
+module load prun/2.2
+
+export OMPI_MCA_pml=ucx
+
+export OMP_NUM_THREADS="${SLURM_CPUS_PER_TASK:-1}"
+export OMP_PLACES=cores
+export OMP_PROC_BIND=close
+
+mkdir -p outs
+
+
+###############################################################################
+# Utility functions
+###############################################################################
+
+die()
+{
+    echo "ERROR: $*" >&2
+    exit 1
+}
+
+
+# Replace a variable in the &SYSTEM namelist.
+#
+# If the variable is absent, insert it immediately below &SYSTEM.
+set_system_value()
+{
+    local file=$1
+    local key=$2
+    local value=$3
+
+    if grep -qiE "^[[:space:]]*${key}[[:space:]]*=" "${file}"; then
+
+        sed -i -E \
+            "s|^([[:space:]]*)${key}[[:space:]]*=.*|\1${key} = ${value},|I" \
+            "${file}"
+
+    else
+
+        grep -qiE "^[[:space:]]*&SYSTEM([[:space:]]|$)" "${file}" ||
+            die "No &SYSTEM namelist found in ${file}"
+
+        sed -i -E \
+            "/^[[:space:]]*&SYSTEM([[:space:]]|$)/I a\\    ${key} = ${value}," \
+            "${file}"
+    fi
+}
+
+
+# Replace the line immediately following
+#
+#     K_POINTS automatic
+#
+# with
+#
+#     nk nk 1 shift_x shift_y shift_z
+#
+set_automatic_kmesh()
+{
+    local file=$1
+    local nk=$2
+    local shift_x=$3
+    local shift_y=$4
+    local shift_z=$5
+
+    grep -qiE \
+        "^[[:space:]]*K_POINTS[[:space:]]+automatic" \
+        "${file}" ||
+        die "'K_POINTS automatic' not found in ${file}"
+
+    sed -i -E \
+        "/^[[:space:]]*K_POINTS[[:space:]]+automatic/I {
+            n
+            s|.*| ${nk} ${nk} ${nk} ${shift_x} ${shift_y} ${shift_z}|
+        }" \
+        "${file}"
+}
+
+
+prepare_qe_input()
+{
+    local template=$1
+    local output=$2
+    local nk=$3
+    local shift_x=$4
+    local shift_y=$5
+    local shift_z=$6
+
+    [[ -f "${template}" ]] ||
+        die "Input template not found: ${template}"
+
+    cp -- "${template}" "${output}"
+
+    set_system_value "${output}" "ecutwfc" "${ECUTWFC}"
+    set_system_value "${output}" "nbnd" "${NBND}"
+
+    set_automatic_kmesh \
+        "${output}" \
+        "${nk}" \
+        "${shift_x}" \
+        "${shift_y}" \
+        "${shift_z}"
+}
+
+
+###############################################################################
+# Sanity checks
+###############################################################################
+
+[[ -f "${SCF_TEMPLATE}" ]] ||
+    die "SCF template not found: ${SCF_TEMPLATE}"
+
+[[ -f "${NSCF_TEMPLATE}" ]] ||
+    die "NSCF template not found: ${NSCF_TEMPLATE}"
+
+[[ -d PS ]] ||
+    die "Pseudopotential directory PS/ not found"
+
+if (( SLURM_NTASKS % NPOOL != 0 )); then
+    die "NPOOL=${NPOOL} must divide SLURM_NTASKS=${SLURM_NTASKS}"
+fi
+
+
+###############################################################################
+# Clean files from previous calculation
+###############################################################################
+
+rm -f \
+    LiF.scf.K*.in \
+    LiF.nscf.K*.in \
+    LiF.scf.K*.out \
+    LiF.nscf.K*.out \
+    core.*
+
+# Remove previous QE database so that this job starts cleanly.
+rm -rf "./pbe_sr/LiF_sr.save/"
+
+
+###############################################################################
+# Job information
+###############################################################################
+
+echo "============================================================"
+echo "Quantum ESPRESSO LiF SCF + NSCF"
+echo "============================================================"
+echo "Starting at       : $(date)"
+echo "Job name          : ${SLURM_JOB_NAME}"
+echo "Job ID            : ${SLURM_JOB_ID}"
+echo "Node list         : ${SLURM_NODELIST}"
+echo
+echo "MPI ranks         : ${SLURM_NTASKS}"
+echo "MPI ranks/node    : ${SLURM_NTASKS_PER_NODE:-unspecified}"
+echo "OpenMP threads    : ${OMP_NUM_THREADS}"
+echo "Total CPU threads : $((SLURM_NTASKS * OMP_NUM_THREADS))"
+echo
+echo "SCF k mesh        : ${SCF_NK} x ${SCF_NK} x 1"
+echo "SCF k shift       : ${SCF_SHIFT_X} ${SCF_SHIFT_Y} ${SCF_SHIFT_Z}"
+echo
+echo "NSCF k mesh       : ${NSCF_NK} x ${NSCF_NK} x 1"
+echo "NSCF k shift      : ${NSCF_SHIFT_X} ${NSCF_SHIFT_Y} ${NSCF_SHIFT_Z}"
+echo
+echo "ecutwfc           : ${ECUTWFC} Ry"
+echo "Number of bands   : ${NBND}"
+echo "QE pools          : ${NPOOL}"
+echo "MPI ranks/pool    : $((SLURM_NTASKS / NPOOL))"
+echo
+echo "Working directory : $(pwd)"
+echo "============================================================"
+
+
+###############################################################################
+# Prepare SCF input
+###############################################################################
+
+prepare_qe_input \
+    "${SCF_TEMPLATE}" \
+    "${SCF_INPUT}" \
+    "${SCF_NK}" \
+    "${SCF_SHIFT_X}" \
+    "${SCF_SHIFT_Y}" \
+    "${SCF_SHIFT_Z}"
+
+
+###############################################################################
+# Prepare NSCF input
+###############################################################################
+
+prepare_qe_input \
+    "${NSCF_TEMPLATE}" \
+    "${NSCF_INPUT}" \
+    "${NSCF_NK}" \
+    "${NSCF_SHIFT_X}" \
+    "${NSCF_SHIFT_Y}" \
+    "${NSCF_SHIFT_Z}"
+
+
+echo
+echo "Generated inputs:"
+echo "  SCF : ${SCF_INPUT}"
+echo "  NSCF: ${NSCF_INPUT}"
+
+echo
+echo "SCF K_POINTS:"
+grep -A1 -i "K_POINTS.*automatic" "${SCF_INPUT}"
+
+echo
+echo "NSCF K_POINTS:"
+grep -A1 -i "K_POINTS.*automatic" "${NSCF_INPUT}"
+
+
+###############################################################################
+# Run SCF
+###############################################################################
+
+echo
+echo "============================================================"
+echo "[$(date)] Starting SCF calculation"
+echo "============================================================"
+
+prun pw.x \
+    -in "${SCF_INPUT}" \
+    -npool "${NPOOL}" \
+    > "${SCF_OUTPUT}"
+
+if ! grep -q "JOB DONE" "${SCF_OUTPUT}"; then
+    die "SCF calculation did not finish normally; inspect ${SCF_OUTPUT}"
+fi
+
+echo
+echo "[$(date)] SCF completed successfully"
+
+
+###############################################################################
+# Verify SCF database
+###############################################################################
+
+[[ -d "./pbe_sr/LiF_sr.save/" ]] ||
+    die "SCF finished but "./pbe_sr/LiF_sr.save/" was not created"
+
+
+###############################################################################
+# Run NSCF
+###############################################################################
+
+echo
+echo "============================================================"
+echo "[$(date)] Starting NSCF calculation"
+echo "============================================================"
+
+prun pw.x \
+    -in "${NSCF_INPUT}" \
+    -npool "${NPOOL}" \
+    > "${NSCF_OUTPUT}"
+
+if ! grep -q "JOB DONE" "${NSCF_OUTPUT}"; then
+    die "NSCF calculation did not finish normally; inspect ${NSCF_OUTPUT}"
+fi
+
+prun ph.x -ni 4 -nk 2 -inp "${PH_INPUT}" > "${PH_OUTPUT}"
+
+echo
+echo "[$(date)] NSCF completed successfully"
+
+
+###############################################################################
+# Finished
+###############################################################################
+
+echo
+echo "============================================================"
+echo "Finished successfully at: $(date)"
+echo
+echo "SCF input               : ${SCF_INPUT}"
+echo "SCF output              : ${SCF_OUTPUT}"
+echo
+echo "NSCF input              : ${NSCF_INPUT}"
+echo "NSCF output             : ${NSCF_OUTPUT}"
+echo
+echo "QE database             : ./pbe_sr/LiF_sr.save/"
+echo "============================================================"

@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+#SBATCH --job-name=DGrd
+#SBATCH --output=outs/%x.%j.out
+#SBATCH --error=outs/%x.%j.err
+#SBATCH --partition=c9
+#SBATCH --nodes=1
+#SBATCH --ntasks=24
+#SBATCH --ntasks-per-node=24
+#SBATCH --cpus-per-task=2
+
+set -euo pipefail
+ulimit -l unlimited
+
+###############################################################################
+# Environment
+###############################################################################
+export OMP_NUM_THREADS=${SLURM_CPUS_PER_TASK:-1}
+
+mkdir -p outs
+
+ROOT="${SLURM_SUBMIT_DIR}"
+COARSE="${ROOT}/Trial"
+FINE="${ROOT}/DBGrid"
+
+SCF_TEMPLATE="${ROOT}/LiF.scf_sr.in"
+NSCF_TEMPLATE="${ROOT}/LiF.nscf_sr.in"
+
+LUMEN_BIN="/home/attaccalite/SOFTWARE/lumen/bin_backup"
+YAMBO="${LUMEN_BIN}/yambo"
+P2Y="${LUMEN_BIN}/p2y"
+YPP="${LUMEN_BIN}/ypp"
+
+NPOOL=4
+SCF_NK=8
+COARSE_NK=12
+FINE_NK=47
+
+###############################################################################
+# Environments
+###############################################################################
+
+load_qe() {
+    module purge
+    module load gnu12/12.2.0
+    module load openmpi4/4.1.5
+    module load ucx/1.17.0
+    module load pmix/4.2.9
+    module load openblas/0.3.21
+    module load fftw/3.3.10
+    module load scalapack/2.2.0
+    module load phdf5/1.14.0
+    module load netcdf/4.9.0
+    module load netcdf-fortran/4.6.0
+    module load petsc/3.22.0_s
+    module load slepc/3.22.0_s
+    module load qe/7.3.1
+    module load prun/2.2
+
+}
+
+load_lumen() {
+    module purge
+    module load gnu12/12.2.0
+    module load openmpi4/4.1.5
+    module load phdf5/1.14.0
+    module load netcdf/4.9.0
+    module load netcdf-fortran/4.6.0
+    module load scalapack/2.2.2
+    module load fftw/3.3.10
+    module load openblas/0.3.21
+    module load petsc/3.22.0_s
+    module load slepc/3.22.0_s
+    module load libxc/5.2.3
+    module load pmix/4.2.9
+    module load prun/2.2
+}
+
+
+###############################################################################
+# Make QE input from template
+# make_input TEMPLATE OUTPUT NK SHIFT
+###############################################################################
+
+make_input() {
+    local template="$1"
+    local output="$2"
+    local nk="$3"
+    local shift="$4"
+
+    awk -v nk="${nk}" -v s="${shift}" '
+        replace {
+            print " " nk, nk, nk, s, s, s
+            replace=0
+            next
+        }
+        { print }
+        /^[[:space:]]*K_POINTS[[:space:]]+automatic/ { replace=1 }
+    ' "${template}" > "${output}"
+}
+
+
+###############################################################################
+# Start clean
+###############################################################################
+
+rm -rf "${COARSE}" "${FINE}"
+mkdir -p "${COARSE}" "${FINE}"
+
+
+###############################################################################
+# 1. COARSE GRID: 8³ SCF -> 12³ NSCF -> p2y -> yambo
+###############################################################################
+
+load_qe
+cd "${COARSE}"
+
+make_input "${SCF_TEMPLATE}"  scf.in  "${SCF_NK}"    1
+make_input "${NSCF_TEMPLATE}" nscf.in "${COARSE_NK}" 0
+
+prun pw.x -npool "${NPOOL}" -in scf.in  > scf.out
+prun pw.x -npool "${NPOOL}" -in nscf.in > nscf.out
+
+COARSE_SAVE="${COARSE}/pbe_sr/LiF_sr.save"
+
+load_lumen
+cd "${COARSE_SAVE}"
+
+"${P2Y}"
+"${YAMBO}"
+#"${YPP}" -m -F dbgrid.in
+
+
+###############################################################################
+# 2. FINE GRID: 8³ SCF -> 47³ NSCF -> p2y -nowf
+###############################################################################
+
+load_qe
+cd "${FINE}"
+
+make_input "${SCF_TEMPLATE}"  scf.in  "${SCF_NK}"  1
+make_input "${NSCF_TEMPLATE}" nscf.in "${FINE_NK}" 0
+
+prun pw.x -npool "${NPOOL}" -in scf.in  > scf.out
+prun pw.x -npool "${NPOOL}" -in nscf.in > nscf.out
+
+FINE_SAVE="${FINE}/pbe_sr/LiF_sr.save"
+
+load_lumen
+cd "${FINE_SAVE}"
+
+"${P2Y}" -nowf
+
+
+###############################################################################
+# 3. Map fine grid onto coarse grid
+###############################################################################
+
+cd "${COARSE_SAVE}"
+
+cat > dbgrid.in <<EOF
+kpts_map
+FineGd_mode= "mixed"
+BZ_DbGd_Nk=0
+%FineGd_DB1_paths
+ "${FINE_SAVE}/" |
+%
+EOF
+
+prun "${YPP}" -F dbgrid.in -J DBG -C DBG
