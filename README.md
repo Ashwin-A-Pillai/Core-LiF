@@ -93,6 +93,403 @@ The installer intentionally does **not** compile LetzElPhC. Its build is
 machine/HPC-specific and requires a C99 compiler, MPI, FFTW3 or MKL, parallel
 HDF5, parallel NetCDF-C, BLAS, GNU Make, and a site-specific `src/make.inc`.
 
+## Reference LiF workflow: QE → Yambo/Lumen → LetzElPhC → luminescence
+
+A complete working LiF example is available in the
+[`Core-LiF`](https://github.com/Ashwin-A-Pillai/Core-LiF) repository.
+
+The main production jobs are in:
+
+- [`scripts/SLURM/scf.job`](https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/SLURM/scf.job)
+- [`scripts/SLURM/X_P.job`](https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/SLURM/X_P.job)
+- [`scripts/luminesence.py`](https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/luminesence.py)
+
+The overall workflow is:
+
+```text
+Quantum ESPRESSO
+    │
+    ├── SCF
+    ├── NSCF
+    └── ph.x
+         │
+         ▼
+pbe_sr/LiF_sr.save + phonon data
+         │
+         ▼
+p2y / Yambo initialization
+         │
+         ├── GW0
+         ├── static screening
+         ├── BSE full, finite Q
+         └── BSE BAR, Q = 0
+                │
+                ▼
+             LetzElPhC
+                │
+                ▼
+             ndb.elph
+                │
+                ▼
+       patched yambo-lelphc
+                │
+                ▼
+       exciton-phonon matrix G
+                │
+                ▼
+      phonon-assisted luminescence
+```
+
+### Stage 1 — QE SCF, NSCF and phonons
+
+Use:
+
+```text
+scripts/SLURM/scf.job
+```
+
+Reference:
+
+```text
+https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/SLURM/scf.job
+```
+
+Submit it from the **Core-LiF project root**, i.e. the directory containing
+`LiF.scf_sr.in`, `LiF.nscf_sr.in`, `LiF.pho.in`, and `PS/`:
+
+```bash
+cd Core-LiF
+sbatch scripts/SLURM/scf.job
+```
+
+The current reference job:
+
+1. loads the Quantum ESPRESSO/HPC module stack;
+2. creates the SCF input from `LiF.scf_sr.in`;
+3. creates the NSCF input from `LiF.nscf_sr.in`;
+4. applies the requested cutoff, band count and k mesh;
+5. runs `pw.x` for the SCF calculation;
+6. verifies that the SCF output contains `JOB DONE`;
+7. runs `pw.x` for the NSCF calculation;
+8. runs `ph.x` using `LiF.pho.in`.
+
+The current reference parameters include:
+
+```text
+SCF_NK  = 8
+NSCF_NK = 8
+ECUTWFC = 80 Ry
+NBND    = 10
+NPOOL   = 4
+```
+
+The reference job uses 24 MPI ranks with 2 OpenMP threads per rank. These
+SLURM resources and module names are site-specific and should be adapted on
+another machine.
+
+The important electronic output is:
+
+```text
+pbe_sr/LiF_sr.save/
+```
+
+This is the QE database used by `p2y` in the next stage. The phonon calculation
+must also finish successfully because the later LetzElPhC step uses the QE
+phonon data and `LiF.pho.in`.
+
+### Stage 2 — GW0, screening, BSE, LetzElPhC and luminescence
+
+Use:
+
+```text
+scripts/SLURM/X_P.job
+```
+
+Reference:
+
+```text
+https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/SLURM/X_P.job
+```
+
+This job should be run from the QE save directory produced in Stage 1:
+
+```bash
+cd Core-LiF/pbe_sr/LiF_sr.save
+sbatch ../../scripts/SLURM/X_P.job
+```
+
+The working-directory assumption matters. The reference LetzElPhC call uses:
+
+```bash
+-ph "../../LiF.pho.in"
+```
+
+which is correct when the current directory is:
+
+```text
+Core-LiF/pbe_sr/LiF_sr.save/
+```
+
+The reference `X_P.job` performs the following sequence.
+
+#### 2.1 Convert QE data and initialize Yambo
+
+```text
+p2y
+yambo
+```
+
+This creates the local Yambo `SAVE/` database from the QE calculation.
+
+#### 2.2 GW0
+
+The job generates and patches a GW input and runs a `GW0` calculation. In the
+reference LiF setup the electronic range extends over bands 1–10.
+
+#### 2.3 Static screening
+
+The job performs static screening and creates the `screening` job database.
+
+This is also where the `ndb.dipoles` database used by the reference
+luminescence post-processing is located:
+
+```text
+screening/ndb.dipoles
+```
+
+Therefore the Python input uses:
+
+```python
+dipolespath = f"{path}/screening"
+```
+
+rather than assuming `ndb.dipoles` is located in `Bfull`.
+
+#### 2.4 Finite-Q BSE: `Bfull`
+
+The first BSE uses:
+
+```text
+LKind = "full"
+```
+
+and spans the finite-Q BSE databases required by the exciton-phonon
+calculation.
+
+For the current LiF core-BSE reference:
+
+```text
+BSEBands       = 1 ... 10
+BSEFrozenBands = 2 ... 5
+```
+
+so the actual active transition space is:
+
+```text
+core/valence hole : band 1
+conduction        : bands 6,7,8,9,10
+```
+
+The finite-Q BSE databases are written under:
+
+```text
+Bfull/
+```
+
+#### 2.5 Q=0 BAR BSE: `Bbar`
+
+The second BSE uses:
+
+```text
+LKind = "BAR"
+```
+
+with only the Q=0 database. Its output is stored under:
+
+```text
+Bbar/
+```
+
+This database supplies the Q=0/intermediate excitons used by the
+phonon-assisted luminescence calculation.
+
+#### 2.6 Remove stale YamboPy caches
+
+Before regenerating the exciton-phonon quantities, the reference job removes:
+
+```bash
+rm -f Dmats.npy Ex-ph.npy exc_dipoles.npy
+```
+
+This is required whenever the BSE band layout, wavefunctions, phonons or
+relevant databases have changed.
+
+#### 2.7 Run LetzElPhC through YamboPy
+
+The job activates the patched environment:
+
+```bash
+conda activate yambo-lelphc
+```
+
+and then runs:
+
+```bash
+yambopy l2y   -ph "../../LiF.pho.in"   -b 1 10   -par 4 2   -lelphc "/path/to/LetzElPhC/src/lelphc"
+```
+
+For the LiF core-BSE case, **keep `-b 1 10`**.
+
+Bands 2–5 are frozen in the BSE, but the raw LetzElPhC/YamboPy electronic
+database must still span the full contiguous envelope containing both the
+core-hole band and the active conduction bands. The CORE-BSE patch performs the
+later projection:
+
+```text
+[1,2,3,4,5,6,7,8,9,10]
+            ↓
+[1,6,7,8,9,10]
+```
+
+before the symmetry and exciton-phonon contractions.
+
+#### 2.8 Luminescence
+
+The last step is:
+
+```bash
+python3 luminesence.py
+```
+
+Reference:
+
+```text
+https://github.com/Ashwin-A-Pillai/Core-LiF/blob/main/scripts/luminesence.py
+```
+
+The reference script reads:
+
+```text
+SAVE/ns.db1
+Bfull/ndb.BS_diago_Q*
+Bbar/ndb.BS_diago_Q1
+ndb.elph
+screening/ndb.dipoles
+```
+
+and calculates the phonon-assisted luminescence using
+`exc_ph_get_inputs()` and `exc_ph_luminescence()`.
+
+For a portable checkout, either copy the script into the save directory:
+
+```bash
+cp ../../scripts/luminesence.py .
+python3 luminesence.py
+```
+
+or change `X_P.job` to call it through its repository path:
+
+```bash
+python3 ../../scripts/luminesence.py
+```
+
+The `path` variable inside `luminesence.py` must also point to the actual
+calculation directory on the local machine.
+
+### Complete reference submission sequence
+
+Starting from a checkout:
+
+```bash
+git clone https://github.com/Ashwin-A-Pillai/Core-LiF.git
+cd Core-LiF
+```
+
+Run Quantum ESPRESSO first:
+
+```bash
+sbatch scripts/SLURM/scf.job
+```
+
+After that job completes successfully:
+
+```bash
+cd pbe_sr/LiF_sr.save
+cp ../../scripts/luminesence.py .
+sbatch ../../scripts/SLURM/X_P.job
+```
+
+The intended dependency chain is:
+
+```text
+scf.job
+   │
+   ├─ pw.x SCF
+   ├─ pw.x NSCF
+   └─ ph.x
+       │
+       ▼
+X_P.job
+   │
+   ├─ p2y + yambo initialization
+   ├─ GW0
+   ├─ screening
+   ├─ Bfull
+   ├─ Bbar
+   ├─ yambopy l2y / LetzElPhC
+   └─ luminesence.py
+```
+
+### Paths and settings that must be adapted on another cluster
+
+The reference SLURM files are working examples, not universally portable job
+files. At minimum, review:
+
+```text
+#SBATCH --partition
+#SBATCH --nodes
+#SBATCH --ntasks
+#SBATCH --cpus-per-task
+```
+
+and the `module load` commands.
+
+In `X_P.job`, also change the machine-specific paths for:
+
+```text
+YAMBO
+P2Y
+YNL
+YRT
+YPP
+scripts
+LetzElPhC/src/lelphc
+```
+
+The calculation parameters must also be checked rather than copied blindly:
+
+```text
+QE_NBND
+BSE_NBND
+DEFAULT_K_FINAL
+NGBlk
+BSE_EX
+BSE band range
+BSEFrozenBands
+GW/QP parameters
+parallel CPU layouts
+```
+
+For a different material or k mesh, `DEFAULT_K_FINAL` in particular must match
+the finite-Q BSE database range required by the calculation.
+
+The SLURM reference directory is:
+
+```text
+https://github.com/Ashwin-A-Pillai/Core-LiF/tree/main/scripts/SLURM
+```
+
+
 ## Core-BSE usage rules
 
 For:
