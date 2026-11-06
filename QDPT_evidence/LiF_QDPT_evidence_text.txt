@@ -1,0 +1,288 @@
+========== FILE INVENTORY ==========
+QDPT_evidence/headers/Bbar__ndb.BS_diago_Q1.txt (1664 bytes)
+QDPT_evidence/headers/Bfull__ndb.BS_diago_Q1.txt (1664 bytes)
+QDPT_evidence/headers/ndb.elph.txt (1006 bytes)
+QDPT_evidence/headers/SAVE__ndb.elph_gkkp_expanded.txt (587 bytes)
+QDPT_evidence/headers/SAVE__ns.db1.txt (1207 bytes)
+QDPT_evidence/headers/XP__ndb.excph_gkkp.txt (669 bytes)
+QDPT_evidence/samples/selected_NetCDF_samples.npz (1186372 bytes)
+QDPT_evidence/samples/selected_qpoints.json (505 bytes)
+
+========== QDPT_evidence/headers/Bbar__ndb.BS_diago_Q1.txt ==========
+netcdf ndb {
+dimensions:
+	D_0000000003 = 3 ;
+	D_0000000001 = 1 ;
+	D_0000000002 = 2 ;
+	D_0000000100 = 100 ;
+	D_0000000006 = 6 ;
+	D_0000012096 = 12096 ;
+	D_0000000005 = 5 ;
+	re_im = 2 ;
+	kcv = 12096 ;
+	neigs = 12096 ;
+variables:
+	float HEAD_VERSION(D_0000000003) ;
+	float HEAD_REVISION(D_0000000001) ;
+	float SERIAL_NUMBER(D_0000000001) ;
+	float SPIN_VARS(D_0000000002) ;
+	char K_energies_xc_KIND(D_0000000001, D_0000000100) ;
+	int BS_identifier(D_0000000001) ;
+	int Dimension(D_0000000001) ;
+	int Bands(D_0000000002) ;
+	byte RES_EXCH(D_0000000001) ;
+	byte RES_CORR(D_0000000001) ;
+	byte COUPLING(D_0000000001) ;
+	byte CPL_EXCH(D_0000000001) ;
+	byte CPL_CORR(D_0000000001) ;
+	byte W_BARE(D_0000000001) ;
+	byte ALDA_KERNEL(D_0000000001) ;
+	int RL_EXCH(D_0000000001) ;
+	int RL_CORR(D_0000000001) ;
+	float EH_E_RANGE(D_0000000002) ;
+	float CPL_RANGE(D_0000000002) ;
+	byte BS_W_DIAGONAL(D_0000000001) ;
+	int BS_W_NG(D_0000000001) ;
+	int BS_W_BANDS(D_0000000002) ;
+	float BS_W_EH_RANGE(D_0000000002) ;
+	float BS_W_POLES(D_0000000001) ;
+	int BS_W_DIP_NG(D_0000000001) ;
+	byte BS_W_DIP_rVnl(D_0000000001) ;
+	float BS_W_q_dir(D_0000000003) ;
+	char W_Cutoff(D_0000000001, D_0000000100) ;
+	char W_TDDFT_KERNEL(D_0000000001, D_0000000100) ;
+	int W_DbGd(D_0000000002) ;
+	byte PERT_SOC(D_0000000001) ;
+	char BSE_KERNEL_IO_MODE(D_0000000001, D_0000000100) ;
+	char X_kind(D_0000000001, D_0000000100) ;
+	float PARS(D_0000000006) ;
+	float BS_Energies(D_0000012096, D_0000000002) ;
+	float BS_left_Residuals(D_0000012096, D_0000000002) ;
+	float BS_right_Residuals(D_0000012096, D_0000000002) ;
+	float BS_TABLE(D_0000000005, D_0000012096) ;
+	float BS_EIGENSTATES(neigs, kcv, re_im) ;
+}
+
+========== QDPT_evidence/headers/Bfull__ndb.BS_diago_Q1.txt ==========
+netcdf ndb {
+dimensions:
+	D_0000000003 = 3 ;
+	D_0000000001 = 1 ;
+	D_0000000002 = 2 ;
+	D_0000000100 = 100 ;
+	D_0000000006 = 6 ;
+	D_0000012096 = 12096 ;
+	D_0000000005 = 5 ;
+	re_im = 2 ;
+	kcv = 12096 ;
+	neigs = 12096 ;
+variables:
+	float HEAD_VERSION(D_0000000003) ;
+	float HEAD_REVISION(D_0000000001) ;
+	float SERIAL_NUMBER(D_0000000001) ;
+	float SPIN_VARS(D_0000000002) ;
+	char K_energies_xc_KIND(D_0000000001, D_0000000100) ;
+	int BS_identifier(D_0000000001) ;
+	int Dimension(D_0000000001) ;
+	int Bands(D_0000000002) ;
+	byte RES_EXCH(D_0000000001) ;
+	byte RES_CORR(D_0000000001) ;
+	byte COUPLING(D_0000000001) ;
+	byte CPL_EXCH(D_0000000001) ;
+	byte CPL_CORR(D_0000000001) ;
+	byte W_BARE(D_0000000001) ;
+	byte ALDA_KERNEL(D_0000000001) ;
+	int RL_EXCH(D_0000000001) ;
+	int RL_CORR(D_0000000001) ;
+	float EH_E_RANGE(D_0000000002) ;
+	float CPL_RANGE(D_0000000002) ;
+	byte BS_W_DIAGONAL(D_0000000001) ;
+	int BS_W_NG(D_0000000001) ;
+	int BS_W_BANDS(D_0000000002) ;
+	float BS_W_EH_RANGE(D_0000000002) ;
+	float BS_W_POLES(D_0000000001) ;
+	int BS_W_DIP_NG(D_0000000001) ;
+	byte BS_W_DIP_rVnl(D_0000000001) ;
+	float BS_W_q_dir(D_0000000003) ;
+	char W_Cutoff(D_0000000001, D_0000000100) ;
+	char W_TDDFT_KERNEL(D_0000000001, D_0000000100) ;
+	int W_DbGd(D_0000000002) ;
+	byte PERT_SOC(D_0000000001) ;
+	char BSE_KERNEL_IO_MODE(D_0000000001, D_0000000100) ;
+	char X_kind(D_0000000001, D_0000000100) ;
+	float PARS(D_0000000006) ;
+	float BS_Energies(D_0000012096, D_0000000002) ;
+	float BS_left_Residuals(D_0000012096, D_0000000002) ;
+	float BS_right_Residuals(D_0000012096, D_0000000002) ;
+	float BS_TABLE(D_0000000005, D_0000012096) ;
+	float BS_EIGENSTATES(neigs, kcv, re_im) ;
+}
+
+========== QDPT_evidence/headers/ndb.elph.txt ==========
+netcdf ndb {
+dimensions:
+	nq = 1728 ;
+	nmodes = 6 ;
+	atom = 2 ;
+	pol = 3 ;
+	re_im = 2 ;
+	nk = 1728 ;
+	nspin = 1 ;
+	initial_band = 12 ;
+	final_band_PH_abs = 12 ;
+	nq_iBZ = 72 ;
+	dim_two = 2 ;
+	two_scalars = 2 ;
+	scalar = 1 ;
+	nsym_ph = 48 ;
+	kernel_str_size = 5 ;
+	convention_str_size = 6 ;
+	natoms = 2 ;
+variables:
+	float POLARIZATION_VECTORS(nq, nmodes, atom, pol, re_im) ;
+	float FREQ(nq, nmodes) ;
+	float elph_mat(nq, nk, nmodes, nspin, initial_band, final_band_PH_abs, re_im) ;
+	float kpoints(nk, pol) ;
+	float qpoints(nq, pol) ;
+	float qpoints_iBZ(nq_iBZ, pol) ;
+	int qmap(nq, dim_two) ;
+	int kmap(nk, dim_two) ;
+	int bands(two_scalars) ;
+	int number_of_phonon_symmetries(scalar) ;
+	int time_reversal_phonon(scalar) ;
+	float symmetry_matrices(nsym_ph, pol, pol) ;
+	float fractional_translation(nsym_ph, pol) ;
+	char kernel(kernel_str_size) ;
+	char convention(convention_str_size) ;
+	float epsilon(pol, pol) ;
+	float Born_charges(natoms, pol, pol) ;
+	float Quadrupole_tensor(natoms, pol, pol, pol) ;
+}
+
+========== QDPT_evidence/headers/SAVE__ndb.elph_gkkp_expanded.txt ==========
+netcdf ndb {
+dimensions:
+	D_0000000003 = 3 ;
+	D_0000000001 = 1 ;
+	D_0000000002 = 2 ;
+	D_0000000004 = 4 ;
+	D_0000000072 = 72 ;
+	D_0000000008 = 8 ;
+	D_0000001728 = 1728 ;
+variables:
+	float HEAD_VERSION(D_0000000003) ;
+	float HEAD_REVISION(D_0000000001) ;
+	float SERIAL_NUMBER(D_0000000001) ;
+	float SPIN_VARS(D_0000000002) ;
+	float HEAD_R_LATT(D_0000000004) ;
+	float HEAD_KPT(D_0000000003, D_0000000072) ;
+	float FRAGMENTED(D_0000000001) ;
+	float PARS(D_0000000008) ;
+	float MAX_PH_FREQ(D_0000000001) ;
+	float PH_Q(D_0000000003, D_0000001728) ;
+	float PH_K(D_0000000003, D_0000001728) ;
+}
+
+========== QDPT_evidence/headers/SAVE__ns.db1.txt ==========
+netcdf ns {
+dimensions:
+	D_0000000018 = 18 ;
+	D_0000000001 = 1 ;
+	D_0000000003 = 3 ;
+	D_0000000002 = 2 ;
+	D_0000000048 = 48 ;
+	D_0000010777 = 10777 ;
+	D_0000000072 = 72 ;
+	D_0000000012 = 12 ;
+	D_0000001363 = 1363 ;
+variables:
+	float DIMENSIONS(D_0000000018) ;
+	float WF_G_COMPONENTS(D_0000000001) ;
+	float MAX_ATOMS(D_0000000001) ;
+	float number_of_atom_species(D_0000000001) ;
+	float EXX_FRACTION(D_0000000001) ;
+	float EXX_SCREENING(D_0000000001) ;
+	float mag_syms(D_0000000001) ;
+	byte non_symmorphic_syms(D_0000000001) ;
+	float GPL_REVISION(D_0000000001) ;
+	float LATTICE_PARAMETER(D_0000000003) ;
+	float LATTICE_VECTORS(D_0000000003, D_0000000003) ;
+	float N_ATOMS(D_0000000002) ;
+	float ATOM_POS(D_0000000002, D_0000000001, D_0000000003) ;
+	float atomic_numbers(D_0000000002) ;
+	float ATOM_MASS(D_0000000002) ;
+	float ATOM_MAP(D_0000000002, D_0000000001) ;
+	float SYMMETRY(D_0000000048, D_0000000003, D_0000000003) ;
+	float TRANSLATIONS(D_0000000048, D_0000000003) ;
+	float G-VECTORS(D_0000000003, D_0000010777) ;
+	float K-POINTS(D_0000000003, D_0000000072) ;
+	float EIGENVALUES(D_0000000001, D_0000000072, D_0000000012) ;
+	float WFC_NG(D_0000000072) ;
+	float WFC_GRID(D_0000000072, D_0000001363) ;
+}
+
+========== QDPT_evidence/headers/XP__ndb.excph_gkkp.txt ==========
+netcdf ndb {
+dimensions:
+	D_0000000003 = 3 ;
+	D_0000000001 = 1 ;
+	D_0000000002 = 2 ;
+	D_0000000004 = 4 ;
+	D_0000000072 = 72 ;
+	D_0000000007 = 7 ;
+	D_0000000100 = 100 ;
+variables:
+	float HEAD_VERSION(D_0000000003) ;
+	float HEAD_REVISION(D_0000000001) ;
+	float SERIAL_NUMBER(D_0000000001) ;
+	float SPIN_VARS(D_0000000002) ;
+	float HEAD_R_LATT(D_0000000004) ;
+	float HEAD_KPT(D_0000000003, D_0000000072) ;
+	float FRAGMENTED(D_0000000001) ;
+	float PARS(D_0000000007) ;
+	float EXCITON_STATES(D_0000000002) ;
+	float EXCITON_SUM(D_0000000002) ;
+	float PHONON_MODES(D_0000000001) ;
+	char L_kind_in(D_0000000001, D_0000000100) ;
+	char L_kind_out(D_0000000001, D_0000000100) ;
+}
+
+========== QDPT_evidence/samples/selected_qpoints.json ==========
+[
+  {
+    "q_full_BZ": 1,
+    "q_reduced": [
+      -0.0,
+      0.0,
+      0.0
+    ],
+    "Bfull_Q": 1
+  },
+  {
+    "q_full_BZ": 2,
+    "q_reduced": [
+      -0.0,
+      0.0,
+      0.08333334912575403
+    ],
+    "Bfull_Q": 2
+  },
+  {
+    "q_full_BZ": 3,
+    "q_reduced": [
+      -0.08333334912575403,
+      -0.08333334912575403,
+      -0.08333334912575403
+    ],
+    "Bfull_Q": 2
+  },
+  {
+    "q_full_BZ": 6,
+    "q_reduced": [
+      -0.0,
+      0.0,
+      -0.08333334912575403
+    ],
+    "Bfull_Q": 2
+  }
+]
