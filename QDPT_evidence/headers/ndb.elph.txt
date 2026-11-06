@@ -1,0 +1,39 @@
+netcdf ndb {
+dimensions:
+	nq = 1728 ;
+	nmodes = 6 ;
+	atom = 2 ;
+	pol = 3 ;
+	re_im = 2 ;
+	nk = 1728 ;
+	nspin = 1 ;
+	initial_band = 12 ;
+	final_band_PH_abs = 12 ;
+	nq_iBZ = 72 ;
+	dim_two = 2 ;
+	two_scalars = 2 ;
+	scalar = 1 ;
+	nsym_ph = 48 ;
+	kernel_str_size = 5 ;
+	convention_str_size = 6 ;
+	natoms = 2 ;
+variables:
+	float POLARIZATION_VECTORS(nq, nmodes, atom, pol, re_im) ;
+	float FREQ(nq, nmodes) ;
+	float elph_mat(nq, nk, nmodes, nspin, initial_band, final_band_PH_abs, re_im) ;
+	float kpoints(nk, pol) ;
+	float qpoints(nq, pol) ;
+	float qpoints_iBZ(nq_iBZ, pol) ;
+	int qmap(nq, dim_two) ;
+	int kmap(nk, dim_two) ;
+	int bands(two_scalars) ;
+	int number_of_phonon_symmetries(scalar) ;
+	int time_reversal_phonon(scalar) ;
+	float symmetry_matrices(nsym_ph, pol, pol) ;
+	float fractional_translation(nsym_ph, pol) ;
+	char kernel(kernel_str_size) ;
+	char convention(convention_str_size) ;
+	float epsilon(pol, pol) ;
+	float Born_charges(natoms, pol, pol) ;
+	float Quadrupole_tensor(natoms, pol, pol, pol) ;
+}
